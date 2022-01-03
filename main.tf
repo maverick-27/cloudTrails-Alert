@@ -12,6 +12,7 @@ provider "aws" {
   region = "us-east-1"
 }
 
+
 resource "aws_cloudtrail" "my-trail" {
   name                          = "my-trail"
   s3_bucket_name                = aws_s3_bucket.trail-bucket.id
@@ -22,11 +23,51 @@ resource "aws_cloudtrail" "my-trail" {
   depends_on                    = [aws_s3_bucket_policy.bucket-policy]
 }
 
+
 resource "aws_cloudwatch_log_group" "trails" {
   name = "trails"
 }
 
-
+locals {
+  metrics = [
+    {
+      "name" : "new-user-created",
+      "pattern" : "{ $.eventName = CreateUser }",
+      "namespace" : "IAM",
+      "alarm" : {
+        "comparison_operator" : "GreaterThanOrEqualToThreshold",
+        "evaluation_periods" : 1,
+        "period" : 300,
+        "statistic" : "Sum",
+        "threshold" : 2,
+      }
+    },
+    {
+      "name" : "security-group-changed",
+      "pattern" : "{ $.eventName = *SecurityGroup }",
+      "namespace" : "SecurityGroup",
+      "alarm" : {
+        "comparison_operator" : "GreaterThanOrEqualToThreshold",
+        "evaluation_periods" : 1,
+        "period" : 300,
+        "statistic" : "Sum",
+        "threshold" : 1,
+      },
+    },
+    {
+      "name" : "lambda-invoked",
+      "pattern" : "{ $.eventName = *LambdaInvoked }",
+      "namespace" : "Lambda",
+      "alarm" : {
+        "comparison_operator" : "GreaterThanOrEqualToThreshold",
+        "evaluation_periods" : 1,
+        "period" : 300,
+        "statistic" : "Sum",
+        "threshold" : 1,
+      }
+    }
+  ]
+}
 
 resource "aws_cloudwatch_metric_alarm" "metric-alarms" {
   for_each = {
@@ -60,3 +101,5 @@ resource "aws_cloudwatch_log_metric_filter" "trail-metrics" {
     value     = "1"
   }
 }
+
+
